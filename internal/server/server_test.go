@@ -94,7 +94,8 @@ func TestStoreWins(t *testing.T) {
     server := &PlayerServer{&store}
 
     t.Run("it records wins when POST", func(t *testing.T) {
-        request := newPostWinRequest("Pepper")
+        player_name := "Max"
+        request := newPostWinRequest(player_name)
         response := httptest.NewRecorder()
 
         server.ServeHTTP(response, request)
@@ -103,6 +104,10 @@ func TestStoreWins(t *testing.T) {
 
         if len(store.WinCalls) != 1 {
             t.Errorf("got %d calls to RecordWin want %d", len(store.WinCalls), 1)
+        }
+
+        if store.WinCalls[0] != player_name {
+            t.Errorf("did not store correct winner got %q want %q", store.WinCalls[0], player_name)
         }
     })
 }

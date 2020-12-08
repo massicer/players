@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"fmt"
+    "fmt"
+    "errors"
 )
 
 type StubPlayerStore struct {
     scores map[string]int
     WinCalls []string
+    returnErrorDuringStore bool
 }
 
 func (s *StubPlayerStore) GetPlayerScore(name string) int {
@@ -19,8 +21,11 @@ func (s *StubPlayerStore) GetPlayerScore(name string) int {
 }
 
 func (s *StubPlayerStore) RecordWin(name string)  error {
-    s.WinCalls = append(s.WinCalls, name)
-    return nil
+    if !s.returnErrorDuringStore{
+        s.WinCalls = append(s.WinCalls, name)
+        return nil
+    }
+    return errors.New("Cannot insert record")
 }
 
 func TestGETPlayers(t *testing.T) {
@@ -31,6 +36,7 @@ func TestGETPlayers(t *testing.T) {
             "Floyd":  10,
         },
         make([]string, 0),
+        false,
     }
     server := &PlayerServer{Store: &store}
 
@@ -90,13 +96,30 @@ func TestStoreWins(t *testing.T) {
     store := StubPlayerStore{
         map[string]int{},
         make([]string, 0),
+        true,
     }
     server := &PlayerServer{&store}
+
+    t.Run("it doesn't record wins when POST if repo returns error", func(t *testing.T) {
+        player_name := "Max"
+        request := newPostWinRequest(player_name)
+        response := httptest.NewRecorder()
+
+        server.ServeHTTP(response, request)
+
+        assertStatus(t, response.Code, http.StatusInternalServerError)
+
+        if len(store.WinCalls) != 0 {
+            t.Errorf("got %d calls to RecordWin want %d", len(store.WinCalls), 0)
+        }
+    })
 
     t.Run("it records wins when POST", func(t *testing.T) {
         player_name := "Max"
         request := newPostWinRequest(player_name)
         response := httptest.NewRecorder()
+
+        store.returnErrorDuringStore = false
 
         server.ServeHTTP(response, request)
 

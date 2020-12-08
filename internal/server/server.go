@@ -41,7 +41,11 @@ func (p *PlayerServer) showScore(w http.ResponseWriter, r *http.Request) {
 
 func (p *PlayerServer) processWin(w http.ResponseWriter, r *http.Request) {
 	player := strings.TrimPrefix(r.URL.Path, "/players/")
-
-	w.WriteHeader(http.StatusAccepted)
-	p.Store.RecordWin(player)
+    err := p.Store.RecordWin(player)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        fmt.Fprint(w, "Cannot process win")
+    } else {
+        w.WriteHeader(http.StatusAccepted)
+    }
 }

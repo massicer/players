@@ -7,6 +7,7 @@ import (
 	"testing"
     "fmt"
     "errors"
+    "github.com/massicer/players/internal/store"
 )
 
 type StubPlayerStore struct {
@@ -138,4 +139,20 @@ func TestStoreWins(t *testing.T) {
 func newPostWinRequest(name string) *http.Request {
     req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/players/%s", name), nil)
     return req
+}
+
+func TestRecordingWinsAndRetrievingThem(t *testing.T) {
+    store := store.InMemoryPlayerStore{Scores: make(map[string]int)}
+    server := PlayerServer{&store}
+    player := "Pepper"
+
+    server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+    server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+    server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
+
+    response := httptest.NewRecorder()
+    server.ServeHTTP(response, newGetScoreRequest(player))
+    assertStatus(t, response.Code, http.StatusOK)
+
+    assertResponseBody(t, response.Body.String(), "3")
 }

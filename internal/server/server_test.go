@@ -8,6 +8,8 @@ import (
     "fmt"
     "errors"
     "github.com/massicer/players/internal/store"
+    "github.com/massicer/players/internal/entities"
+    "encoding/json"
 )
 
 type StubPlayerStore struct {
@@ -29,6 +31,12 @@ func (s *StubPlayerStore) RecordWin(name string)  error {
     return errors.New("Cannot insert record")
 }
 
+func (i *StubPlayerStore) GetLeagueTable() []entities.Player{
+    return []entities.Player {
+        entities.Player{Name: "Max", Wins: 0},
+    }
+}
+
 func TestGETPlayers(t *testing.T) {
 
 	store := StubPlayerStore{
@@ -39,7 +47,7 @@ func TestGETPlayers(t *testing.T) {
         make([]string, 0),
         false,
     }
-    server := &PlayerServer{Store: &store}
+    server := NewPlayerServer(&store)
 
     t.Run("returns Pepper's score", func(t *testing.T) {
         request := newGetScoreRequest("Pepper")
@@ -99,7 +107,7 @@ func TestStoreWins(t *testing.T) {
         make([]string, 0),
         true,
     }
-    server := &PlayerServer{&store}
+    server := NewPlayerServer(&store)
 
     t.Run("it doesn't record wins when POST if repo returns error", func(t *testing.T) {
         player_name := "Max"
@@ -143,7 +151,7 @@ func newPostWinRequest(name string) *http.Request {
 
 func TestRecordingWinsAndRetrievingThem(t *testing.T) {
     store := store.InMemoryPlayerStore{Scores: make(map[string]int)}
-    server := PlayerServer{&store}
+    server := NewPlayerServer(&store)
     player := "Pepper"
 
     server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
@@ -158,8 +166,8 @@ func TestRecordingWinsAndRetrievingThem(t *testing.T) {
 }
 
 func TestLeague(t *testing.T) {
-    store := StubPlayerStore{}
-    server := &PlayerServer{&store}
+    st := StubPlayerStore{}
+    server := NewPlayerServer(&st)
 
     t.Run("it returns 200 on /league", func(t *testing.T) {
         request, _ := http.NewRequest(http.MethodGet, "/league", nil)
@@ -167,6 +175,15 @@ func TestLeague(t *testing.T) {
 
         server.ServeHTTP(response, request)
 
+        var got []entities.Player
+
+        err := json.NewDecoder(response.Body).Decode(&got)
+
+        if err != nil {
+            t.Fatalf("Unable to parse response from server %q into slice of Player, '%v'", response.Body, err)
+        }
+
         assertStatus(t, response.Code, http.StatusOK)
+
     })
 }

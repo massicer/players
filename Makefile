@@ -12,3 +12,5 @@ start:
 
 build:
 	go build ./cmd/main.go
+
+all: lint test build

@@ -34,9 +34,12 @@ func NewPlayerServer(store PlayerStore) *PlayerServer {
 }
 
 func (p *PlayerServer) leagueHandler(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
     leagueTable := p.Store.GetLeagueTable()
-    json.NewEncoder(w).Encode(leagueTable)
+    err := json.NewEncoder(w).Encode(leagueTable)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+    }
+    w.WriteHeader(http.StatusOK)
 }
 
 func (p *PlayerServer) playersHandler(w http.ResponseWriter, r *http.Request) {
